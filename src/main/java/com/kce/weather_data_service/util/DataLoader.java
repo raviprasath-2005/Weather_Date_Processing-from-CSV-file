@@ -1,17 +1,27 @@
 package com.kce.weather_data_service.util;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.stereotype.Component;
+import java.time.LocalDate;
 
-@Component
-public class DataLoader implements CommandLineRunner {
+import org.springframework.data.jpa.domain.Specification;
 
-    @Autowired
-    private CsvService csvService;
+import com.kce.weather_data_service.entity.WeatherData;
+public class DataLoader {
 
-    @Override
-    public void run(String... args) {
-        csvService.saveCsvData("D:/testset.csv");
+    public static Specification<WeatherData> hasYear(Integer year) {
+        return (root, query, cb) ->
+                year == null ? null :
+                        cb.equal(root.get("year"), year);
+    }
+
+    public static Specification<WeatherData> hasMonth(Integer month) {
+        return (root, query, cb) ->
+                month == null ? null :
+                        cb.equal(root.get("month"), month);
+    }
+
+    public static Specification<WeatherData> hasDate(LocalDate date) {
+        return (root, query, cb) ->
+                date == null ? null :
+                        cb.equal(root.get("recordDate"), date);
     }
 }

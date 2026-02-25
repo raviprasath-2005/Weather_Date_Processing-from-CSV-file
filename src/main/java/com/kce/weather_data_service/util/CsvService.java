@@ -1,75 +1,123 @@
 package com.kce.weather_data_service.util;
-import java.io.FileReader;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Component;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.kce.weather_data_service.entity.WeatherData;
-import com.kce.weather_data_service.repository.WeatherRepository;
-import com.opencsv.CSVReader;
 
-@Service
+@Component
 public class CsvService {
+    public List<WeatherData> parseCsvFile(MultipartFile file) throws IOException {
 
-    @Autowired
-    private WeatherRepository repository;
+        List<WeatherData> weatherDatas = new ArrayList<>();
 
-    public void saveCsvData(String filePath) {
-        try (CSVReader reader = new CSVReader(new FileReader(filePath))) {
+        try (BufferedReader reader =
+                     new BufferedReader(
+                             new InputStreamReader(file.getInputStream()))) {
 
-            String[] line;
-            reader.readNext();
+            String line;
+            boolean isFirstLine = true;
 
-            while ((line = reader.readNext()) != null) {
+            while ((line = reader.readLine()) != null) {
 
-                WeatherData data = new WeatherData();
+//                if (isFirstLine) {
+//                    isFirstLine = false;
+//                    continue;
+//                }
+//
+                String[] data = line.split(",",-1);
+//
+                if (data.length < 20) {
+                    continue;
+                }
+//
+                LocalDate date = parseDate(data[0]);
+                if (date == null) {
+                    continue;
+                }
 
-                data.setDatetimeUtc(line[0]);
-                data.setConds(line[1]);
-                data.setDewptm(parseDouble(line[2]));
-                data.setFog(parseInt(line[3]));
-                data.setHail(parseInt(line[4]));
-                data.setHeatindexm(parseDouble(line[5]));
-                data.setHum(parseDouble(line[6]));
-                data.setPrecipm(parseDouble(line[7]));
-                data.setPressurem(parseDouble(line[8]));
-                data.setRain(parseInt(line[9]));
-                data.setSnow(parseInt(line[10]));
-                data.setTempm(parseDouble(line[11]));
-                data.setThunder(parseInt(line[12]));
-                data.setTornado(parseInt(line[13]));
-                data.setVism(parseDouble(line[14]));
-                data.setWdird(parseDouble(line[15]));
-                data.setWdire(line[16]);
-                data.setWgustm(parseDouble(line[17]));
-                data.setWindchillm(parseDouble(line[18]));
-                data.setWspdm(parseDouble(line[19]));
+                WeatherData weatherData = new WeatherData();
 
-                repository.save(data);
+
+                weatherData.setRecordDate(date);
+                weatherData.setYear(date.getYear());
+                weatherData.setMonth(date.getMonthValue());
+                weatherData.setWeatherCondition(data[1]);
+
+                weatherData.setDewPoint(parseDouble(data[2]));
+                weatherData.setFog(parseInteger(data[3]) != null && parseInteger(data[3]) == 1);
+                weatherData.setHail(parseInteger(data[4]) != null && parseInteger(data[4]) == 1);
+                weatherData.setHeatIndex(parseDouble(data[5]));
+                weatherData.setHumidity(parseDouble(data[6]));
+                weatherData.setPrecipitation(parseDouble(data[7]));
+                weatherData.setPressure(parseDouble(data[8]));
+                weatherData.setRain(parseInteger(data[9]) != null && parseInteger(data[9]) == 1);
+                weatherData.setSnow(parseInteger(data[10]) != null && parseInteger(data[10]) == 1);
+                weatherData.setTemperature(parseDouble(data[11]));
+                weatherData.setThunder(parseInteger(data[12]) != null && parseInteger(data[12]) == 1);
+                weatherData.setTornado(parseInteger(data[13]) != null && parseInteger(data[13]) == 1);
+                weatherData.setVisibility(parseDouble(data[14]));
+                weatherData.setWindDirectionDegree(parseInteger(data[15]));
+                weatherData.setWindDirectionText(data[16]);
+                weatherData.setWindGust(parseDouble(data[17]));
+                weatherData.setWindChill(parseDouble(data[18]));
+                weatherData.setWindSpeed(parseDouble(data[19]));
+
+                weatherDatas.add(weatherData);
+
+
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+        return weatherDatas;
     }
 
     private Double parseDouble(String value) {
+        if (value == null || value.trim().isEmpty() || value.equals("-9999"))
+            return null;
+
         try {
-            if (value == null || value.isEmpty() || value.equals("-9999"))
-                return null;
-            return Double.parseDouble(value);
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private Integer parseInteger(String value) {
+        if (value == null || value.trim().isEmpty() || value.equals("-9999"))
+            return null;
+
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private LocalDate parseDate(String rawDate) {
+
+        if (rawDate == null || rawDate.trim().isEmpty())
+            return null;
+
+        rawDate = rawDate.trim();
+
+        try {
+            String datePart = rawDate.substring(0, 8);
+
+            return LocalDate.parse(datePart,
+                    DateTimeFormatter.ofPattern("yyyyMMdd"));
+
         } catch (Exception e) {
             return null;
         }
     }
 
-    private Integer parseInt(String value) {
-        try {
-            if (value == null || value.isEmpty())
-                return null;
-            return Integer.parseInt(value);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }
